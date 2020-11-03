@@ -454,7 +454,7 @@ limitations under the License.
       }
 
       //find all marker types for this row
-      const labels = this._findLabelsForRow(rowInfo.index);
+      const labels = this._findLabelsForRow(rowInfo.index, mousePos);
 
       // if no markers we want a tooltip on in that row
       if(labels.length === 0) {
@@ -512,6 +512,11 @@ limitations under the License.
       } else if(data[left]) {
         //closer to left
         indexChosen = left;
+      }
+
+      if(indexChosen >= data.length || indexChosen < 0) { // we need to check why this happens
+        this._closeTooltip();
+        return;
       }
 
       //check if we have additional points with same timestamp
@@ -718,12 +723,17 @@ limitations under the License.
         return {'index': domain[domainIndex], 'rowY': rowY};
     },
 
-    _findLabelsForRow: function(rowIndex) {
+    _findLabelsForRow: function(rowIndex, mousePos) {
       const index = Number(rowIndex);
       const result = [];
+      const y = mousePos[1];
+      const locationSeparator = (this.margin && this.margin.bottom !== undefined)
+                                  ? (this.height - this.margin.bottom)
+                                  : this.height / 2;
+      const location = y >= locationSeparator ? 'bottom' : 'top';
 
       Object.entries(this._markerConfig).forEach(([key,conf]) => {
-        if(index === conf.row && conf.showTooltip) {
+        if(index === conf.row && location === conf.location && conf.showTooltip) {
           result.push(key);
         }
       });
