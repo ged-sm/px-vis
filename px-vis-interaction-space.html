@@ -174,6 +174,7 @@ TODO implement a dev setting to choose between only showing data at that x, snap
           'startStriping': '_startStriping',
           'stopStriping': '_finishActionBox',
           'calcTooltipData': '_calcTooltipData',
+          'calcTooltipDataWithMouseEnd': '_calcTooltipDataWithMouseEnd',
           'calcCrosshairData': '_calcCrosshairData',
           'calcTooltipAndCrosshairData': '_calcTooltipAndCrosshairData',
           'resetTooltipAndCrosshairData': '_resetTooltipAndCrosshairData',
@@ -359,9 +360,15 @@ TODO implement a dev setting to choose between only showing data at that x, snap
         type: Boolean,
         value: false
       },
+
       isHeatmap: {
         type: Boolean,
         value: false
+      },
+
+      _mouseMoveStopTimer: {
+        type: Number,
+        value: null
       }
     },
 
@@ -623,6 +630,23 @@ TODO implement a dev setting to choose between only showing data at that x, snap
       this._calcData();
     },
 
+    _calcTooltipDataWithMouseEnd: function (event) {
+      this._calcTooltip = true;
+      this._calcCrosshair = false;
+
+      this._calcData();
+
+      clearTimeout(this._mouseMoveStopTimer);
+
+      var self = this;
+      var mousePos = Px.d3.mouse(this._rect.node());
+      var eventType = Px.d3.event.type;
+
+      this._mouseMoveStopTimer = setTimeout(function() {
+        self.fire("px-vis-interaction-space-mouse-coords", { mouse: mousePos, type: eventType});
+      }, 300);
+    },
+
     _calcCrosshairData: function() {
       this._calcTooltip = false;
       this._calcCrosshair = true;
@@ -714,7 +738,7 @@ TODO implement a dev setting to choose between only showing data at that x, snap
           delete dataObj.timeStamps;
           this.set('tooltipData',dataObj);
           this.fire('px-vis-pinnedmarker-updated', { 'dataVar': 'tooltipData', 'data': dataObj, 'method':'set' });
-					this.set('_calcPinnedMarker', false);
+          this.set('_calcPinnedMarker', false);
         }
 
         this.set('_calculatingData', false);
@@ -814,7 +838,7 @@ TODO implement a dev setting to choose between only showing data at that x, snap
             Object.keys(this.completeSeriesConfig),
           closestTimestamp = { "distance": Number.MAX_VALUE, "time": null };
           //search for timestamp if we don't have it already (non time based chart) and we know the data has some notion of time -- !! --> turn into a bool
-          searchTimeStamp = dataObj.time === null && !!this.chartData[0][this.timeData];
+          var searchTimeStamp = dataObj.time === null && !!this.chartData[0][this.timeData];
 
       for(var i = 0; i < keys.length; i++) {
         //if we had a request to reset tooltip stop calculating
@@ -1130,7 +1154,7 @@ TODO implement a dev setting to choose between only showing data at that x, snap
         range = this.y.range();
       }
 
-      rangeInterval = (range[1] - range[0])/domain.length;
+      var rangeInterval = (range[1] - range[0])/domain.length;
 
       var axisPos = 0,
           distance = Number.MAX_VALUE,

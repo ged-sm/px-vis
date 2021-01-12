@@ -182,20 +182,86 @@ limitations under the License.
     },
 
     _renderStripes: function(data) {
-      var x, w;
       for(var i = 0; i < data.length; i++) {
-        x = this.x(data[i][0]),
-        w = data[i][1] || data[i][1] === 0 ? this.x(data[i][1]) - x : 0;
+        var x, w, boundaries;
+        // since ordinal scale is not aware of the global domain, we have to handle it separately
+        if(this.x._scaleType === "ordinal"){
+          var d = this.x.domain();
+
+          boundaries = this._getBoundaries(d,data[i]);
+          x = boundaries[1];
+          w = (boundaries[0]) ? boundaries[2] - x : -1;
+        } else {
+          x = this.x(data[i][0]),
+            w = data[i][1] || data[i][1] === 0 ? this.x(data[i][1]) - x : 0;
+        }
 
         if(w === 0) {
           this.canvasContext.beginPath();
           this.canvasContext.moveTo(x,0);
           this.canvasContext.lineTo(x, this.height);
           this.canvasContext.stroke();
-        } else {
+        } else if(w !== -1) {
           this.canvasContext.fillRect(x, 0, w, this.height);
         }
       }
+    },
+
+    _getBoundaries: function(domain, stripeBoundary){
+      var leftDomainBoundary = domain[0],
+        rightDomainBoundary = domain[domain.length - 1],
+        nearestLeftBoundary = this._findNearestOptimized(stripeBoundary[0], domain),
+        nearestRightBoundary = this._findNearestOptimized(stripeBoundary[1], domain),
+        leftBoundaryIdx = nearestLeftBoundary[1],
+        rightBoundaryIdx = nearestRightBoundary[0],
+        leftBoundaryDomainVal = domain[leftBoundaryIdx],
+        rightBoundaryDomainVal = domain[rightBoundaryIdx],
+        leftXVal = this.x(leftBoundaryDomainVal),
+        rightXVal = this.x(rightBoundaryDomainVal);
+
+      // if neither point was an exact match, and BOTH points fall between the same 2 domain values, then this is // a zero-length stripe in this domain, and it should NOT be rendered
+      if (!nearestLeftBoundary[2] && !nearestRightBoundary[2]
+        && nearestLeftBoundary[0] === nearestRightBoundary[0]
+        && nearestLeftBoundary[1] === nearestRightBoundary[1]){
+        return [false, null, null];
+      }
+
+      var left = (leftDomainBoundary === leftBoundaryDomainVal)
+        ? this.x(leftDomainBoundary)
+        : leftXVal - (leftXVal - this.x(domain[leftBoundaryIdx - 1])) * 0.50;
+      var right = (rightDomainBoundary === rightBoundaryDomainVal)
+        ? this.x(rightDomainBoundary)
+        : rightXVal + (this.x(domain[rightBoundaryIdx + 1]) - rightXVal) * 0.50;
+
+      return [true, left, right];
+    },
+
+    _findNearestOptimized: function(value, values) {
+      if (!values || values.length === 0) { return [-1, -1, false]; }
+
+      let min = 0;
+      let max = values.length - 1;
+      let index;
+      let currentElement;
+
+      // if it is less than the min, the value
+      if (value < values[min]) { return [ -1, min, false ]; }
+      if (value > values[max]) { return [ max, -1, false ]; }
+
+      // keep searching until/unless we get our min and max indices reversed, in which case we didn't find the value
+      while (min <= max) {
+        // This follows binary search examples online, but there's a more optimized (but harder to read) way to find the midpoint: https://oli.me.uk/2013/06/08/searching-javascript-arrays-with-a-binary-search/
+        index = Math.floor((min + max) / 2);
+        currentElement = values[index];
+
+        if (currentElement < value) { min = index + 1; }
+        else if (currentElement > value) { max = index - 1; }
+        else { return [ index, index, true ]; } // got it!
+      }
+
+      // The order of min and max will get reversed when a number isn't found (i.e. we keep looping until min > max), but we know these identify the points surrounding
+      // the value specified. So, if this is the case, we know the values before and after in the set.
+      return [ max, min, values[index] === value ];
     },
 
     /**
