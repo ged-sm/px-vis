@@ -1552,7 +1552,7 @@ PxVisBehaviorD3.lineShared = [{
         yKey = sc['y'],
         line;
 
-    if((sc['showGaps']) || (sc['showGaps'] === undefined && this.showGaps)) {
+    if((sc['showGaps'] !== undefined && !sc['showGaps']) || (sc['showGaps'] === undefined && this.showGaps)) {
       line = Px.d3.line()
         .x(function(d, i) {
           // round pixels values to optimize svg perfs
