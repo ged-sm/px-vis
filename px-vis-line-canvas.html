@@ -163,6 +163,9 @@ limitations under the License.
         this._defineRadialLine(true, this.multiPath, this.counterClockwise, this.useDegrees);
       } else {
         this._defineSingleLine(true);
+          if(this.completeSeriesConfig[this.seriesId].fillArea){
+              this._defineArea(true);
+          }
       }
 
       //make sure we have the right muted opacity
@@ -296,6 +299,10 @@ limitations under the License.
           if(opacity !== 0) {
             this.canvasContext.globalAlpha = opacity;
             this.line(data);
+
+              if(this.area){
+                  this.area(data);
+              }
           }
         } else {
 
@@ -315,9 +322,16 @@ limitations under the License.
         this.canvasContext.setLineDash(dashPattern);
 
         //only strike once
-        this.canvasContext.strokeStyle = this.completeSeriesConfig[this.seriesId]['color'];
-        this.canvasContext.globalAlpha = opacity;
-        this.canvasContext.stroke();
+
+          this.canvasContext.strokeStyle = this.completeSeriesConfig[this.seriesId]['color'];
+          this.canvasContext.globalAlpha = opacity;
+
+          if(this.area){
+              this.canvasContext.fillStyle = this.completeSeriesConfig[this.seriesId]['color'];
+              this.canvasContext.fill();
+          } else {
+              this.canvasContext.stroke();
+          }
       }
 
       this.canvasContext.restore();

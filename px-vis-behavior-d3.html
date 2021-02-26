@@ -1547,11 +1547,12 @@ PxVisBehaviorD3.lineShared = [{
   _defineSingleLine: function(toCanvas) {
     var _this = this,
         renderToCanvas = (typeof(toCanvas) !== 'undefined') ? toCanvas : false,
-        xKey = _this.completeSeriesConfig[_this.seriesId]['x'],
-        yKey = _this.completeSeriesConfig[_this.seriesId]['y'],
+        sc = _this.completeSeriesConfig[_this.seriesId],
+        xKey = sc['x'],
+        yKey = sc['y'],
         line;
 
-    if(this.showGaps) {
+    if((sc['showGaps'] !== undefined && !sc['showGaps']) || (sc['showGaps'] === undefined && this.showGaps)) {
       line = Px.d3.line()
         .x(function(d, i) {
           // round pixels values to optimize svg perfs
@@ -1605,6 +1606,31 @@ PxVisBehaviorD3.lineShared = [{
 
     this.set('line',line);
   },
+
+  _defineArea: function(toCanvas){
+      var _this = this,
+          renderToCanvas = (typeof(toCanvas) !== 'undefined') ? toCanvas : false,
+          sc = _this.completeSeriesConfig[_this.seriesId],
+          xKey = sc['x'],
+          boundaryKeys = sc['areaBoundaryKeys'],
+          y0Key = _this.completeSeriesConfig[`${boundaryKeys['left']}`]['y'],
+          y1Key = _this.completeSeriesConfig[`${boundaryKeys['right']}`]['y'],
+          area;
+
+      area = Px.d3.area()
+          .x(function(d, i) { return _this.x(d[xKey]); }.bind(this))
+          .y0(function(d) { return Math.floor(this.y(d[y0Key])); }.bind(this))
+          .y1(function(d) { return Math.floor(this.y(d[y1Key])); }.bind(this));
+
+      // If using canvas, tell it the context to draw to.
+      if(renderToCanvas) {
+          area.context(this.canvasContext);
+      }
+
+      this.set('area',area);
+  },
+
+
 
   /**
    * Defines a multi-scale d3 line generator and its attrs
